@@ -5,6 +5,32 @@
 - Operate on a monthly subscription basis.
 - Interactive, trust-based interaction with the user.
 
+## User Flow
+
+### Registration Process
+1. Start the bot by sending `/start`
+   - If user is new: Begins registration process
+   - If user exists: Shows welcome back message with daily forecast option
+
+2. New User Registration Steps:
+   - Name input: User provides their name
+   - Birth date: User enters birth date in YYYY-MM-DD format (e.g., 1990-04-15)
+   - Birth time: User provides birth time in HH:MM format (e.g., 14:30)
+   - Birth place: User enters their birth place (e.g., New York, USA)
+   - After registration: User receives their natal chart interpretation
+
+### Daily Usage
+1. Get Daily Forecast
+   - Send `/daily` command
+   - Bot checks user registration status
+   - If registered: Provides personalized daily forecast
+   - If not registered: Prompts to start registration
+
+### Commands
+- `/start` - Begin registration or show welcome message
+- `/daily` - Get your daily astrological forecast
+- `/cancel` - Cancel the current operation (during registration)
+
 ## Architecture and Technologies
 - Language: Python 3
 - Telegram Bot Framework: `python-telegram-bot`
@@ -56,8 +82,22 @@ To test the integration:
 python3 test_openai_service.py
 ```
 
-#### 5. Commit Your Changes (If Using Git)
+## Development Setup
+
+1. Clone the repository
+2. Create a virtual environment and activate it
+3. Install dependencies: `pip install -r requirements.txt`
+4. Set up environment variables in `.env`:
+   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
+   - `OPENAI_API_KEY`: Your OpenAI API key
+5. Initialize the database: `python3 init_db.py`
+6. Run the bot: `python3 -m bot.main`
+
+## Running the Bot
 
 ```bash
-git add .
-git commit -m "Add OpenAI integration for natal chart and daily forecasts"
+# Start the bot
+python3 -m bot.main
+
+# To stop the bot
+Ctrl+C
