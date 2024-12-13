@@ -31,6 +31,23 @@
 - `/daily` - Get your daily astrological forecast
 - `/cancel` - Cancel the current operation (during registration)
 
+## Subscription and Payment
+
+- `/subscribe`: Sends an invoice for a monthly subscription.
+- After successful payment:
+  - The user's subscription is recorded in the database.
+  - `/daily` forecasts become available only if the user has an active subscription.
+
+### Payment Flow
+1. User sends `/subscribe`.
+2. Bot sends an invoice via Telegram Payments.
+3. User pays the invoice.
+4. Bot receives a `SUCCESSFUL_PAYMENT` update and activates the subscription for 30 days.
+5. The user can now use `/daily` to get daily forecasts.
+
+### Environment Variables
+- `PAYMENT_PROVIDER_TOKEN` must be set in `.env`.
+
 ## Architecture and Technologies
 - Language: Python 3
 - Telegram Bot Framework: `python-telegram-bot`

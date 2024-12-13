@@ -13,13 +13,13 @@ def generate_natal_chart_description(name: str, birthdate: str, birthtime: str, 
     Uses OpenAI API to generate a natal chart interpretation given user's birth details.
     """
     messages = [
-        {"role": "system", "content": "You are a friendly and knowledgeable astrologer."},
+        {"role": "system", "content": "You are a friendly and the smartest astrologer in the world."},
         {
             "role": "user",
             "content": (
                 f"A user named {name} was born on {birthdate} at {birthtime} in {birthplace}. "
                 "Based on these birth details, provide a concise interpretation of their natal chart. "
-                "Include key personality traits and life themes. Keep the tone warm, encouraging, and trustworthy."
+                "Include key personality traits and life themes. Keep the tone warm, encouraging, and trustworthy. Respond in the language of user's {name} with maximum of 500 tokens "
             ),
         },
     ]
@@ -27,7 +27,7 @@ def generate_natal_chart_description(name: str, birthdate: str, birthtime: str, 
     response = client.chat.completions.create(
         model="gpt-4o",  # or any other available model
         messages=messages,
-        max_tokens=300,
+        max_tokens=600,
         temperature=0.7
     )
 
@@ -40,12 +40,12 @@ def generate_daily_prediction(name: str) -> str:
     Uses OpenAI API to generate a daily forecast for the user.
     """
     messages = [
-        {"role": "system", "content": "You are a friendly astrologer."},
+        {"role": "system", "content": "You are a friendly and the smartest astrologer in the world."},
         {
             "role": "user",
             "content": (
                 f"The user's name is {name}. Provide a short, personalized daily astrological "
-                "forecast. Include a helpful tip or positive affirmation for the day."
+                "forecast. Include a helpful tip or positive affirmation for the day. Use the language of his {name}. Maximum 200 tokens"
             ),
         },
     ]
@@ -53,7 +53,7 @@ def generate_daily_prediction(name: str) -> str:
     response = client.chat.completions.create(
         model="gpt-4o",  # or any other available model
         messages=messages,
-        max_tokens=150,
+        max_tokens=250,
         temperature=0.7
     )
 

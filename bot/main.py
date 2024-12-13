@@ -1,8 +1,8 @@
 # bot/main.py
 import os
 from dotenv import load_dotenv
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, LabeledPrice, PreCheckoutQuery
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, PreCheckoutQueryHandler
 from bot.services.database import SessionLocal
 from bot.models.models import User
 from bot.services.openai_service import generate_natal_chart_description
@@ -11,6 +11,10 @@ from datetime import datetime
 load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN")
+
+# Define a subscription price (in cents). Let's say $5 for a month.
+MONTHLY_PRICE = LabeledPrice("Monthly Subscription", 500)  # 500 cents = $5
 
 # Conversation states
 ASK_NAME, ASK_BIRTHDATE, ASK_BIRTHTIME, ASK_BIRTHPLACE = range(4)
@@ -99,18 +103,58 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def daily_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # This will be implemented fully later, but for now let's just confirm user exists.
     session = SessionLocal()
     user_id = str(update.effective_user.id)
     user = session.query(User).filter_by(telegram_id=user_id).first()
-    if user:
-        from bot.services.openai_service import generate_daily_prediction
-        forecast = generate_daily_prediction(user.name)
-        await update.message.reply_text(forecast)
-    else:
-        await update.message.reply_text(
-            "I don't have your details yet. Please use /start to register."
-        )
+    session.close()
+
+    if not user:
+        await update.message.reply_text("I don't have your details yet. Please use /start to register.")
+        return
+
+    from bot.services.subscription_service import is_subscription_active
+    if not is_subscription_active(user_id):
+        await update.message.reply_text("You need an active subscription to view the daily forecast. Use /subscribe to get one!")
+        return
+
+    # If subscription is active, proceed
+    from bot.services.openai_service import generate_daily_prediction
+    forecast = generate_daily_prediction(user.name)
+    await update.message.reply_text(forecast)
+
+async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    # If user already has an active subscription, inform them
+    from bot.services.subscription_service import is_subscription_active
+    if is_subscription_active(user_id):
+        await update.message.reply_text("You already have an active subscription!")
+        return
+
+    # Send an invoice
+    await update.message.reply_invoice(
+        title="Monthly Astrological Subscription",
+        description="Access to daily personalized forecasts and advanced features for a month.",
+        provider_token=PAYMENT_PROVIDER_TOKEN,
+        currency="USD",
+        prices=[MONTHLY_PRICE],
+        start_parameter="astro-subscription",
+        payload="monthly_sub"
+    )
+
+async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.pre_checkout_query
+    # You can perform some checks here if necessary.
+    await query.answer(ok=True)
+
+async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    # Create or renew subscription after successful payment
+    from bot.services.subscription_service import create_or_renew_subscription
+    create_or_renew_subscription(user_id, days=30)  # 30 days subscription
+
+    await update.message.reply_text("Thank you for your purchase! Your subscription is now active.")
 
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
@@ -128,6 +172,9 @@ def main():
 
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("daily", daily_forecast))
+    app.add_handler(CommandHandler("subscribe", subscribe))
+    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
+    app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
 
     print("Bot is running...")
     app.run_polling()
